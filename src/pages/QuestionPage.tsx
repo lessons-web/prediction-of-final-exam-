@@ -35,7 +35,7 @@ export function QuestionPage() {
       <div className="card">
         <div className="cardTitleRow">
           <div className="cardTitle">题目描述</div>
-          <span className="chip">可直接复制到讲义</span>
+          <span className="chip">讲义</span>
         </div>
         <div className="muted" style={{ whiteSpace: 'pre-wrap' }}>
           {q.prompt}
@@ -45,7 +45,6 @@ export function QuestionPage() {
       <div className="card">
         <div className="cardTitleRow">
           <div className="cardTitle">本题考查知识点</div>
-          <span className="chip">视频讲解清单</span>
         </div>
         <div className="chips">
           {q.knowledge.map((k) => (
@@ -59,7 +58,7 @@ export function QuestionPage() {
       <div className="card">
         <div className="cardTitleRow">
           <div className="cardTitle">演示（核心组件 + 功能展示）</div>
-          <span className="chip">课堂 Demo / 作业参考</span>
+          <span className="chip">Demo / 作业参考</span>
         </div>
         <Demo />
       </div>

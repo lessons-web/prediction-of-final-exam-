@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QuestionDef } from '../types'
 import { lsGet, lsSet, randomInt, shuffle } from '../lib/utils'
@@ -702,26 +705,33 @@ function G1Q7() {
 }
 
 // -------------------------
-// G1-Q8 冲刺｜Network Init + Fallback
+// G1-Q8 冲刺｜Lucky Score Challenge（local score.json + 回合积分）
 function G1Q8() {
   const KEY = 'g1q8.score'
-  const URL = 'https://cgi.cse.unsw.edu.au/~cs6080/raw/data/score.json'
-  const [x, setX] = useState<number>(() => lsGet<number | null>(KEY, null) ?? 5)
+  // 本题默认使用本地 score.json，真实考试可按题目要求替换地址。
+  const URL = '/score.json'
+  const [score, setScore] = useState<number>(() => lsGet<number | null>(KEY, null) ?? 5)
+  const [target, setTarget] = useState<number>(() => randomInt(1, 9))
+  const [guess, setGuess] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'ok'>('idle')
 
   async function init(fromReset: boolean) {
     setStatus('loading')
+    setMsg(null)
+    setGuess('')
+    setTarget(randomInt(1, 9))
     try {
       const res = await fetch(URL)
       const data = (await res.json()) as { score: number }
       const val = Number(data.score) || 5
-      setX(val)
+      setScore(val)
       lsSet(KEY, val)
       setStatus('ok')
     } catch {
       // 兜底：5
       const val = 5
-      setX(val)
+      setScore(val)
       lsSet(KEY, val)
       setStatus(fromReset ? 'error' : 'error')
     }
@@ -730,32 +740,60 @@ function G1Q8() {
   useEffect(() => {
     const cached = lsGet<number | null>(KEY, null)
     if (cached == null) init(false)
-    else setX(cached)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    else setScore(cached)
   }, [])
+
+  function submit() {
+    const n = Number(guess)
+    if (!guess.trim() || Number.isNaN(n) || n < 1 || n > 9) {
+      setMsg('请输入 1–9 的有效数字')
+      return
+    }
+    const hit = n === target
+    setScore((prev) => {
+      const next = Math.max(0, prev + (hit ? 2 : -1))
+      lsSet(KEY, next)
+      return next
+    })
+    setMsg(hit ? `猜中！目标是 ${target}，积分 +2。` : `猜错，目标是 ${target}，积分 -1。`)
+    setGuess('')
+    setTarget(randomInt(1, 9))
+  }
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <MiniTitle>Network Init（fetch 初始值 + localStorage 优先级 + 失败兜底）</MiniTitle>
-      <div className="muted">典型考点：初始化优先级、reset 行为、网络失败不崩。</div>
+      <MiniTitle>Lucky Score Challenge（本地 score.json 初始化 + 猜中加分）</MiniTitle>
+      <div className="muted">典型考点：初始化优先级、fetch 失败兜底、回合积分与持久化。</div>
       <div className="card" style={{ background: 'rgba(0,0,0,0.14)' }}>
-        <div style={{ fontSize: 24, fontWeight: 900 }}>X = {x}</div>
+        <div style={{ fontSize: 24, fontWeight: 900 }}>Score = {score}</div>
         <div className="muted" style={{ marginTop: 6 }}>
           URL：{URL}
+        </div>
+        <div className="muted" style={{ marginTop: 6 }}>
+          每轮系统随机一个 1–9 的目标，猜中 +2，猜错 -1（最低 0 分）。
+        </div>
+        <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+          <input
+            className="input"
+            value={guess}
+            placeholder="输入 1–9"
+            onChange={(e) => setGuess(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+          />
+          <Row>
+            <button className="btn btnPrimary" onClick={submit}>
+              Submit
+            </button>
+            <button className="btn" onClick={() => setMsg(`debug：本轮目标 = ${target}`)}>
+              Debug
+            </button>
+          </Row>
+          {msg && <div className={msg.includes('请输入') ? 'danger' : ''}>{msg}</div>}
         </div>
         <div className="divider" />
         <Row>
           <button className="btn btnPrimary" onClick={() => init(true)} disabled={status === 'loading'}>
             Reset（重新 fetch）
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              setX((v) => v + 1)
-              lsSet(KEY, x + 1)
-            }}
-          >
-            +1（模拟胜利/扣分逻辑）
           </button>
         </Row>
         <div style={{ marginTop: 10 }} className="muted">
@@ -1102,16 +1140,17 @@ export const game1Questions: QuestionDef[] = [
   {
     group: 'game1',
     qid: 'q8',
-    title: 'Network Init + Fallback',
+    title: 'Lucky Score Challenge',
     difficulty: '冲刺',
-    tags: ['fetch JSON', '失败兜底', '初始化优先级'],
+    tags: ['fetch JSON', '回合积分', '初始化优先级'],
     prompt:
-      '实现一个计数器 X 的初始化流程：\n' +
-      '- 首次进入：优先读 localStorage；若没有则 fetch 给定 URL 的 {score}\n' +
-      '- fetch 失败：使用默认值 5（但仍要写入 localStorage，保证后续可用）\n' +
-      '- Reset：重新 fetch（失败仍回默认）',
-    knowledge: ['初始化优先级设计', 'fetch JSON', '异常/失败兜底', 'localStorage 持久化', '按钮触发重新初始化'],
-    summary: '首次进入优先读 localStorage；若无则 fetch 初始值；失败兜底 5；Reset 重新 fetch。',
+      '实现一个“积分猜数”小游戏：\n' +
+      '- 初始积分流程：优先读 localStorage；若没有则 fetch 本地 /score.json 的 {score}\n' +
+      '- fetch 失败：使用默认值 5，并写入 localStorage\n' +
+      '- 每轮随机目标 1–9：猜中 +2，猜错 -1（分数不低于 0）\n' +
+      '- Reset：重新 fetch 初始积分（考试时可替换成题目给定地址）',
+    knowledge: ['初始化优先级设计', 'fetch JSON', '异常/失败兜底', '回合积分更新', 'localStorage 持久化'],
+    summary: '不是纯知识点：先初始化积分，再做回合猜数（+2/-1），并支持 Reset 重新 fetch。',
     Component: G1Q8,
   },
   {

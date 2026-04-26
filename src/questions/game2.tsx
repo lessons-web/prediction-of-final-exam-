@@ -1,3 +1,6 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from 'react'
 import type { QuestionDef } from '../types'
 import { lsGet, lsSet, randomInt, shuffle } from '../lib/utils'
@@ -934,59 +937,158 @@ function G2Q7() {
 }
 
 // -------------------------
-// G2-Q8 冲刺｜Overlay Animation（3 秒闪烁）
+// G2-Q8 冲刺｜Boss Warning Round（先一轮操作，再 3 秒闪烁 Overlay）
+// eslint-disable-next-line react-refresh/only-export-components
 function G2Q8() {
-  const [status, setStatus] = useState<'idle' | 'anim' | 'overlay'>('idle')
+  const [status, setStatus] = useState<'idle' | 'playing' | 'anim' | 'overlay'>('idle')
+  const [timeLeft, setTimeLeft] = useState(10)
+  const [score, setScore] = useState(0)
+  const [target, setTarget] = useState(() => randomInt(0, 15))
   const [flash, setFlash] = useState(false)
-  const iRef = useRef<number | null>(null)
-  const tRef = useRef<number | null>(null)
+  const playTickRef = useRef<number | null>(null)
+  const targetTickRef = useRef<number | null>(null)
+  const flashRef = useRef<number | null>(null)
+  const doneRef = useRef<number | null>(null)
+
+  function clearPlayTimers() {
+    if (playTickRef.current) window.clearInterval(playTickRef.current)
+    if (targetTickRef.current) window.clearInterval(targetTickRef.current)
+    playTickRef.current = null
+    targetTickRef.current = null
+  }
+
+  function clearAnimTimers() {
+    if (flashRef.current) window.clearInterval(flashRef.current)
+    if (doneRef.current) window.clearTimeout(doneRef.current)
+    flashRef.current = null
+    doneRef.current = null
+  }
 
   function start() {
-    setStatus('anim')
+    clearPlayTimers()
+    clearAnimTimers()
+    setStatus('playing')
+    setTimeLeft(10)
+    setScore(0)
+    setTarget(randomInt(0, 15))
+    setFlash(false)
   }
 
   function reset() {
-    if (iRef.current) window.clearInterval(iRef.current)
-    if (tRef.current) window.clearTimeout(tRef.current)
-    iRef.current = null
-    tRef.current = null
+    clearPlayTimers()
+    clearAnimTimers()
     setFlash(false)
+    setTimeLeft(10)
+    setScore(0)
+    setTarget(randomInt(0, 15))
     setStatus('idle')
   }
 
   useEffect(() => {
+    if (status !== 'playing') return
+    playTickRef.current = window.setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearPlayTimers()
+          setStatus('anim')
+          return 0
+        }
+        return t - 1
+      })
+    }, 1000)
+    targetTickRef.current = window.setInterval(() => setTarget(randomInt(0, 15)), 800)
+    return clearPlayTimers
+  }, [status])
+
+  useEffect(() => {
     if (status !== 'anim') return
-    iRef.current = window.setInterval(() => setFlash((f) => !f), 500)
-    tRef.current = window.setTimeout(() => {
-      if (iRef.current) window.clearInterval(iRef.current)
-      iRef.current = null
+    flashRef.current = window.setInterval(() => setFlash((f) => !f), 500)
+    doneRef.current = window.setTimeout(() => {
+      clearAnimTimers()
+      setFlash(false)
       setStatus('overlay')
     }, 3000)
-    return reset
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return clearAnimTimers
   }, [status])
+
+  useEffect(() => {
+    if (status !== 'anim' && status !== 'overlay') return
+    const onKeyDown = (e: KeyboardEvent) => e.preventDefault()
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [status])
+
+  function clickCell(i: number) {
+    if (status !== 'playing') return
+    if (i !== target) return
+    setScore((s) => s + 1)
+    setTarget(randomInt(0, 15))
+  }
+
+  const lockBoard = status !== 'playing'
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <MiniTitle>Overlay Animation（3 秒闪烁 + 交互锁定）</MiniTitle>
-      <div className="muted">典型考点：动画期间禁用输入，动画结束再展示 Overlay。</div>
+      <MiniTitle>Boss Warning Round（10 秒点靶 + 3 秒闪烁 + Overlay）</MiniTitle>
+      <div className="muted">典型考点：一轮游戏结束后，先做 3 秒闪烁动画，再显示结果 Overlay。</div>
 
       <div className="card" style={{ background: 'rgba(0,0,0,0.14)' }}>
-        <div className="muted">点击 Start 触发：每 0.5s 闪烁一次，持续 3 秒，然后出现 Overlay。</div>
+        <div className="chips">
+          <span className="chip chipAmber">Status: {status}</span>
+          <span className="chip">Time: {timeLeft}s</span>
+          <span className="chip chipGreen">Score: {score}</span>
+        </div>
         <div className="divider" />
+        <div className="muted">
+          Playing：点击高亮格子得分。结束后进入 3 秒闪烁（每 0.5 秒切换背景），再弹结果层。
+        </div>
 
         <div
           style={{
             position: 'relative',
-            height: 170,
+            marginTop: 10,
+            padding: 10,
             borderRadius: 16,
             border: '1px solid rgba(255,255,255,0.10)',
             background: flash ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.22)',
-            display: 'grid',
-            placeItems: 'center',
           }}
         >
-          <div className="muted">内容区域（动画期间不可交互）</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+            {Array.from({ length: 16 }).map((_, i) => (
+              <button
+                key={i}
+                className="btn"
+                onClick={() => clickCell(i)}
+                disabled={lockBoard}
+                style={{
+                  height: 58,
+                  fontWeight: 800,
+                  background: i === target ? 'rgba(251,191,36,0.35)' : 'rgba(0,0,0,0.2)',
+                  opacity: lockBoard ? 0.7 : 1,
+                  cursor: lockBoard ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {i === target ? 'HIT' : ''}
+              </button>
+            ))}
+          </div>
+
+          {status === 'anim' && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'grid',
+                placeItems: 'center',
+                background: 'rgba(0,0,0,0.45)',
+                borderRadius: 16,
+                fontWeight: 900,
+              }}
+            >
+              Boss Warning...（闪烁中）
+            </div>
+          )}
+
           {status === 'overlay' && (
             <div
               style={{
@@ -999,12 +1101,12 @@ function G2Q8() {
               }}
             >
               <div className="card" style={{ width: 260 }}>
-                <div style={{ fontWeight: 900 }}>Animation done</div>
+                <div style={{ fontWeight: 900 }}>Round finished</div>
                 <div className="muted" style={{ marginTop: 6 }}>
-                  现在可以显示结果并提供 Play again。
+                  Final score: {score}
                 </div>
                 <div className="divider" />
-                <button className="btn btnPrimary" style={{ width: '100%' }} onClick={reset}>
+                <button className="btn btnPrimary" style={{ width: '100%' }} onClick={start}>
                   Play again
                 </button>
               </div>
@@ -1014,7 +1116,7 @@ function G2Q8() {
 
         <div className="divider" />
         <Row>
-          <button className="btn btnPrimary" onClick={start} disabled={status !== 'idle'}>
+          <button className="btn btnPrimary" onClick={start} disabled={status === 'playing' || status === 'anim'}>
             Start
           </button>
           <button className="btn" onClick={reset}>
@@ -1349,16 +1451,17 @@ export const game2Questions: QuestionDef[] = [
   {
     group: 'game2',
     qid: 'q8',
-    title: 'Overlay Animation（3秒闪烁）',
+    title: 'Boss Warning Round',
     difficulty: '冲刺',
-    tags: ['动画', '交互锁定', '计时控制'],
+    tags: ['一轮流程', '动画', '交互锁定'],
     prompt:
-      '在任意游戏结束后：\n' +
-      '- 先进行 3 秒闪烁动画（每 0.5 秒切换背景）\n' +
-      '- 动画期间禁止点击/键盘输入\n' +
-      '- 动画结束再展示 Overlay（含 Play again）',
-    knowledge: ['setInterval 做闪烁动画', 'setTimeout 控制总时长', '动画期间交互锁定', '结束后清理计时器', 'Overlay 展示'],
-    summary: '常见冲分点：结束后先做 3 秒闪烁动画，期间锁定交互，结束再展示 Overlay。',
+      '实现一个“Boss Warning”回合题：\n' +
+      '- 先进行一轮 10 秒点击得分（例如点击高亮格子 +1）\n' +
+      '- 回合结束后先做 3 秒闪烁动画（每 0.5 秒切换背景）\n' +
+      '- 闪烁期间禁止点击/键盘输入\n' +
+      '- 动画结束再展示 Overlay（显示最终分数 + Play again）',
+    knowledge: ['阶段状态机（playing/anim/overlay）', 'setInterval 驱动回合与闪烁', 'setTimeout 控制总动画时长', '动画期间交互锁定', '计时器清理与重开'],
+    summary: '不再是纯“3 秒闪烁”知识点，而是完整一轮：先玩再闪烁，再弹结果层。',
     Component: G2Q8,
   },
   {
