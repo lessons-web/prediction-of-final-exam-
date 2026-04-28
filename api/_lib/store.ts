@@ -1,25 +1,49 @@
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
 
 export function kvEnvIssue() {
-  const url = String(process.env.KV_REST_API_URL ?? '').trim()
-  const token = String(process.env.KV_REST_API_TOKEN ?? '').trim()
+  const url = readUpstashUrl()
+  const token = readUpstashToken()
 
   if (!url) return 'KV_REST_API_URL_MISSING'
   if (!token) return 'KV_REST_API_TOKEN_MISSING'
-  if (url.includes('`')) return 'KV_REST_API_URL_INVALID'
   if (!/^https?:\/\//.test(url)) return 'KV_REST_API_URL_INVALID'
 
   return null
 }
 
+function stripWrapper(v: string) {
+  return v.trim().replace(/^["'`]+/, '').replace(/["'`]+$/, '')
+}
+
+function readUpstashUrl() {
+  const raw =
+    process.env.KV_REST_API_URL ??
+    process.env.UPSTASH_REDIS_REST_URL ??
+    process.env.UPSTASH_REDIS_REST_API_URL ??
+    ''
+  return stripWrapper(String(raw))
+}
+
+function readUpstashToken() {
+  const raw =
+    process.env.KV_REST_API_TOKEN ??
+    process.env.UPSTASH_REDIS_REST_TOKEN ??
+    process.env.UPSTASH_REDIS_REST_API_TOKEN ??
+    ''
+  return stripWrapper(String(raw))
+}
+
+const redis = new Redis({ url: readUpstashUrl(), token: readUpstashToken() })
+
 export async function kvGet<T>(key: string) {
-  return (await kv.get(key)) as T | null | undefined
+  return (await redis.get(key)) as T | null
 }
 
 export async function kvSet(key: string, value: unknown, opts?: { ex?: number }) {
-  return kv.set(key, value, opts)
+  if (typeof opts?.ex === 'number') return redis.set(key, value, { ex: opts.ex })
+  return redis.set(key, value)
 }
 
 export async function kvDel(key: string) {
-  return kv.del(key)
+  return redis.del(key)
 }

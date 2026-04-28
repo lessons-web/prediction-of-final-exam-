@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-## 登录 / 注册（Vercel KV）
+## 登录 / 注册（Upstash Redis REST）
 
 - 前端路由：`/login`、`/register`
 - API（Vercel Serverless Functions）：
@@ -34,11 +34,10 @@ npm run dev
 
 ## KV 环境变量（本地 / CI）
 
-- 本项目后端仅依赖 `@vercel/kv`，需要的最小环境变量是：
-  - `KV_REST_API_URL`：形如 `https://xxxx.upstash.io`
-  - `KV_REST_API_TOKEN`：可读写 token
-  - `KV_REST_API_READ_ONLY_TOKEN`：可选，仅在你希望只读访问时使用
-- 注意：`KV_REST_API_URL` 不要包含反引号（`` ` ``）；`.env` 文件中一般也不需要额外的引号
+- 本项目后端依赖 `@upstash/redis`（REST API），支持两套环境变量命名（二选一）：
+  - Vercel KV 兼容名：`KV_REST_API_URL` + `KV_REST_API_TOKEN`（可选 `KV_REST_API_READ_ONLY_TOKEN`）
+  - Upstash 默认名：`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
+- 注意：URL / Token 值里不要包含反引号（`` ` ``）或额外引号
 - 参考 [/.env.example](file:///workspace/.env.example)；不要把真实 token 提交到仓库
 - `KV_URL` / `REDIS_URL` 在当前代码中不会被使用（除非你后续改为 Redis 客户端直连）
 
