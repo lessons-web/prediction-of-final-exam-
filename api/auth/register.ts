@@ -6,8 +6,8 @@ import {
   readJson,
   sessionCookieName,
   setCookie,
-} from '../_lib/auth'
-import { kvEnvIssue, kvGet, kvSet } from '../_lib/store'
+} from '../_lib/auth.js'
+import { kvEnvIssue, kvGet, kvSet } from '../_lib/store.js'
 
 type RegisterBody = { username?: unknown; email?: unknown; password?: unknown }
 

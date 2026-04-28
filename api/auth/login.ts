@@ -6,8 +6,8 @@ import {
   sessionCookieName,
   setCookie,
   verifyPassword,
-} from '../_lib/auth'
-import { kvEnvIssue, kvGet, kvSet } from '../_lib/store'
+} from '../_lib/auth.js'
+import { kvEnvIssue, kvGet, kvSet } from '../_lib/store.js'
 
 type LoginBody = { username?: unknown; password?: unknown }
 

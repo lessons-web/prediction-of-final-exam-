@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { clearCookie, cookies, json, sessionCookieName } from '../_lib/auth'
-import { kvEnvIssue, kvGet } from '../_lib/store'
+import { clearCookie, cookies, json, sessionCookieName } from '../_lib/auth.js'
+import { kvEnvIssue, kvGet } from '../_lib/store.js'
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
