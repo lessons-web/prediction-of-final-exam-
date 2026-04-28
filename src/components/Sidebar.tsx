@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import { questionsByGroup } from '../questions'
 import type { QuestionGroup } from '../types'
 
@@ -15,6 +16,7 @@ function groupHint(group: QuestionGroup) {
 
 export function Sidebar() {
   const location = useLocation()
+  const { user, loading, logout } = useAuth()
   const activeGroup = useMemo<QuestionGroup | null>(() => {
     const m = location.pathname.match(/^\/(game1|game2)\//)
     return (m?.[1] as QuestionGroup | undefined) ?? null
@@ -27,6 +29,35 @@ export function Sidebar() {
 
   return (
     <div>
+      <div className="accountBox">
+        <div className="accountRow">
+          <div>
+            <div className="accountLabel">账号</div>
+            <div className="accountValue">
+              {loading ? '验证中…' : user ? user.username : '未登录'}
+            </div>
+          </div>
+          {user ? (
+            <button className="accountBtn" onClick={() => void logout()} type="button">
+              退出
+            </button>
+          ) : (
+            <Link className="accountBtn accountBtnPrimary" to="/login">
+              登录
+            </Link>
+          )}
+        </div>
+
+        {!loading && !user && (
+          <div className="accountHintRow">
+            <span className="accountHint">需要登录后才可进入题目页</span>
+            <Link className="accountLink" to="/register">
+              注册
+            </Link>
+          </div>
+        )}
+      </div>
+
       {(Object.keys(questionsByGroup) as QuestionGroup[]).map((g) => {
         const list = questionsByGroup[g]
         const isOpen = open[g]
@@ -79,4 +110,3 @@ export function Sidebar() {
     </div>
   )
 }
-
