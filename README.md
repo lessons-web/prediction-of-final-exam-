@@ -32,6 +32,16 @@ npm run dev
   - 在 Vercel 控制台创建 KV 数据库，并绑定到当前项目
   - 绑定后会自动注入环境变量（无需提交到仓库）：`KV_REST_API_URL`、`KV_REST_API_TOKEN` 等
 
+## KV 环境变量（本地 / CI）
+
+- 本项目后端仅依赖 `@vercel/kv`，需要的最小环境变量是：
+  - `KV_REST_API_URL`：形如 `https://xxxx.upstash.io`
+  - `KV_REST_API_TOKEN`：可读写 token
+  - `KV_REST_API_READ_ONLY_TOKEN`：可选，仅在你希望只读访问时使用
+- 注意：`KV_REST_API_URL` 不要包含反引号（`` ` ``）；`.env` 文件中一般也不需要额外的引号
+- 参考 [/.env.example](file:///workspace/.env.example)；不要把真实 token 提交到仓库
+- `KV_URL` / `REDIS_URL` 在当前代码中不会被使用（除非你后续改为 Redis 客户端直连）
+
 ## 本地联调（可选）
 
 - 仅 `npm run dev` 会启动 Vite 前端，`/api/*` 在本地不会生效

@@ -1,4 +1,3 @@
-import { kv } from '@vercel/kv'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   hashPassword,
@@ -8,6 +7,7 @@ import {
   sessionCookieName,
   setCookie,
 } from '../_lib/auth'
+import { kvEnvIssue, kvGet, kvSet } from '../_lib/store'
 
 type RegisterBody = { username?: unknown; password?: unknown }
 
@@ -21,6 +21,9 @@ function validatePassword(p: string) {
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
+
+  const issue = kvEnvIssue()
+  if (issue) return json(res, 500, { ok: false, error: issue })
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -45,17 +48,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
 
   const userKey = `user:${username}`
-  const existing = await kv.get(userKey)
+  const existing = await kvGet(userKey)
   if (existing) return json(res, 409, { ok: false, error: 'USER_EXISTS' })
 
   const pass = hashPassword(password)
   const user = { username, pass, createdAt: Date.now() }
-  await kv.set(userKey, user)
+  await kvSet(userKey, user)
 
   const token = newSessionToken()
   const sessionKey = `sess:${token}`
   const ttlSeconds = 60 * 60 * 24 * 14
-  await kv.set(sessionKey, { username, createdAt: Date.now() }, { ex: ttlSeconds })
+  await kvSet(sessionKey, { username, createdAt: Date.now() }, { ex: ttlSeconds })
 
   const proto = req.headers['x-forwarded-proto']
   const secure = (Array.isArray(proto) ? proto[0] : proto) === 'https'
