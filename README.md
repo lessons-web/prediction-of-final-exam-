@@ -11,6 +11,37 @@ npm install
 npm run dev
 ```
 
+## 登录 / 注册（Vercel KV）
+
+- 前端路由：`/login`、`/register`
+- API（Vercel Serverless Functions）：
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `POST /api/auth/logout`
+  - `GET /api/auth/me`
+- 存储：
+  - `user:{username}`：用户信息（含 scrypt 加盐哈希密码）
+  - `sess:{token}`：会话（带 TTL）
+
+## 部署到 Vercel
+
+- 本仓库包含 [vercel.json](file:///workspace/vercel.json)：
+  - 开启 `api/**/*.ts` 的 Node Runtime
+  - 为 SPA 配置重写：除 `/api/*` 与静态文件外，其他路径回落到 `index.html`
+- 使用 Vercel KV：
+  - 在 Vercel 控制台创建 KV 数据库，并绑定到当前项目
+  - 绑定后会自动注入环境变量（无需提交到仓库）：`KV_REST_API_URL`、`KV_REST_API_TOKEN` 等
+
+## 本地联调（可选）
+
+- 仅 `npm run dev` 会启动 Vite 前端，`/api/*` 在本地不会生效
+- 如需本地同时跑前端 + Vercel Functions + KV 环境变量，推荐用 Vercel CLI：
+
+```bash
+npm i -g vercel
+vercel dev
+```
+
 ## 结构
 
 ```
