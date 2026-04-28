@@ -9,10 +9,21 @@ import {
 } from '../_lib/auth'
 import { kvEnvIssue, kvGet, kvSet } from '../_lib/store'
 
-type RegisterBody = { username?: unknown; password?: unknown }
+type RegisterBody = { username?: unknown; email?: unknown; password?: unknown }
 
 function validateUsername(u: string) {
   return /^[a-zA-Z0-9_]{3,24}$/.test(u)
+}
+
+function validateEmailFormat(e: string) {
+  if (!e) return false
+  if (e.length > 254) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+}
+
+function validateEmailDomain(e: string) {
+  const email = e.toLowerCase()
+  return email.endsWith('@ad.unsw.edu.au') && email.length > '@ad.unsw.edu.au'.length
 }
 
 function validatePassword(p: string) {
@@ -38,10 +49,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
 
   const username = String(body?.username ?? '').trim()
+  const email = String(body?.email ?? '').trim()
   const password = String(body?.password ?? '')
 
   if (!validateUsername(username)) {
     return json(res, 400, { ok: false, error: 'INVALID_USERNAME' })
+  }
+  if (!validateEmailFormat(email)) {
+    return json(res, 400, { ok: false, error: 'INVALID_EMAIL' })
+  }
+  if (!validateEmailDomain(email)) {
+    return json(res, 400, { ok: false, error: 'INVALID_EMAIL_DOMAIN' })
   }
   if (!validatePassword(password)) {
     return json(res, 400, { ok: false, error: 'INVALID_PASSWORD' })
@@ -52,7 +70,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   if (existing) return json(res, 409, { ok: false, error: 'USER_EXISTS' })
 
   const pass = hashPassword(password)
-  const user = { username, pass, createdAt: Date.now() }
+  const user = { username, email: email.toLowerCase(), pass, createdAt: Date.now() }
   await kvSet(userKey, user)
 
   const token = newSessionToken()
