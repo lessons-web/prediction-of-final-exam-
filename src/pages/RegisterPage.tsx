@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext'
 
 function errorText(code: string) {
   if (code === 'INVALID_USERNAME') return '用户名格式不正确（3-24 位：字母/数字/下划线）'
+  if (code === 'INVALID_EMAIL') return '邮箱格式不正确'
+  if (code === 'INVALID_EMAIL_DOMAIN') return '请使用 @ad.unsw.edu.au 邮箱'
   if (code === 'INVALID_PASSWORD') return '密码长度需在 6-72 位之间'
   if (code === 'USER_EXISTS') return '该用户名已被注册'
   if (code === 'NETWORK_ERROR') return '网络错误，请稍后重试'
@@ -15,6 +17,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
 
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -38,7 +41,7 @@ export function RegisterPage() {
             e.preventDefault()
             setErr(null)
             setPending(true)
-            const r = await register(username, password)
+            const r = await register(username, email, password)
             setPending(false)
             if (!r.ok) return setErr(r.error)
             return navigate('/', { replace: true })
@@ -54,6 +57,18 @@ export function RegisterPage() {
               spellCheck={false}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="3-24 位：字母/数字/下划线"
+            />
+          </div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div className="muted">邮箱</div>
+            <input
+              className="input"
+              value={email}
+              autoComplete="email"
+              inputMode="email"
+              spellCheck={false}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="yourname@ad.unsw.edu.au"
             />
           </div>
           <div style={{ display: 'grid', gap: 6 }}>
@@ -88,4 +103,3 @@ export function RegisterPage() {
     </div>
   )
 }
-

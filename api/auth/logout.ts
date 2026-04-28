@@ -1,9 +1,12 @@
-import { kv } from '@vercel/kv'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { clearCookie, cookies, json, sessionCookieName } from '../_lib/auth'
+import { kvDel, kvEnvIssue } from '../_lib/store'
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   res.setHeader('Cache-Control', 'no-store')
+
+  const issue = kvEnvIssue()
+  if (issue) return json(res, 500, { ok: false, error: issue })
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -11,7 +14,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
 
   const token = cookies(req)[sessionCookieName]
-  if (token) await kv.del(`sess:${token}`)
+  if (token) await kvDel(`sess:${token}`)
   clearCookie(res, sessionCookieName)
   return json(res, 200, { ok: true })
 }
